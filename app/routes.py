@@ -1,7 +1,7 @@
 from flask import render_template, url_for,flash,redirect,request
 from app import app, db,bcrypt
 from app.models import User,Post
-from app.forms import RegistrationForm,LoginForm, UpdateAccountForm
+from app.forms import RegistrationForm,LoginForm, UpdateAccountForm,PostForm
 from flask_login import login_user, current_user,logout_user,login_required
 import secrets
 import os
@@ -9,22 +9,11 @@ from PIL import Image
 
 
 
-posts = [
-    {
-"author":"matt",
-"title":"blog 1",
-'content':"first post"
-},
-   {
-"author":"luka",
-"title":"blog 2",
-'content':"second post"
-}
 
-]
 
 @app.route('/')
 def home():
+    posts = Post.query.all()
     return render_template('home.html',posts=posts)
 
 @app.route('/about')
@@ -103,6 +92,27 @@ def account():
         form.email.data = current_user.email
     image_file = url_for('static',filename='images/'+ current_user.image_file)
     return render_template('account.html',image_file=image_file,form=form)
+
+
+# create post
+@app.route('/post/new',methods=['GET','POST'])
+@login_required
+def new_post():
+    form = PostForm()
+    if form.validate_on_submit():
+        post = Post(title=form.title.data,content=form.content.data,author=current_user)
+        db.session.add(post) #adds contents to database
+        db.session.commit() #commits session to the database
+        flash('Your post has been created!','success')
+        return redirect(url_for('home'))
+    return render_template('create_post.html',title="Create Post",form=form)
+
+
+@app.route('/post/<int:post_id>',methods=['GET','POST'])
+@login_required
+def post_details(post_id):
+    post = Post.query.get_or_404(post_id)
+    return render_template('post_details.html',title=post.title,post=post)
 
 
 
